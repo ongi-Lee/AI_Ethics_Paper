@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>외계인 처방 시뮬레이션</title>
+  <!-- Inline styles unified from style.css -->
+  <style>
+/* General styles */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #222;
+}
+
+h2 {
+  margin-top: 0;
+  color: #444;
+}
+
+.setting {
+  margin: 10px 0;
+}
+
+label {
+  margin-left: 5px;
+}
+
+button {
+  padding: 8px 16px;
+  font-size: 1rem;
+  border: none;
+  background-color: #007bff;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+.hidden {
+  display: none;
+}
+
+/* Timer styling */
+.timer {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-right: 15px;
+}
+.timer.warning {
+  color: #d97706; /* orange */
+}
+.timer.danger {
+  color: #c53030; /* red */
+}
+
+/* Timer enlarging and blinking for time pressure */
+/* Under time pressure we significantly increase the timer size and flash
+   between red and black to draw the user's attention. */
+.large-timer {
+  font-size: 2.5rem; /* larger font for stronger emphasis */
+}
+@keyframes blink {
+  0%, 100% {
+    color: #c53030; /* red */
+  }
+  50% {
+    color: #000; /* black */
+  }
+}
+.blinking {
+  animation: blink 1s infinite;
+}
+
+/* Treatment plan and symptoms */
+.treatment-plan {
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+  margin-bottom: 10px;
+  font-size: 0.95rem;
+}
+
+.treatment-plan .rule {
+  margin-bottom: 4px;
+}
+
+.observed {
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.ai-box {
+  border: 2px dashed #e53935;
+  background-color: #ffeaea;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  color: #b71c1c;
+  font-weight: bold;
+}
+
+/* Alien image styling */
+/* Alien image styling */
+/* Place the alien picture at the top‑left of the question area. */
+.alien-img {
+  max-width: 150px;
+  float: left;
+  margin-right: 10px;
+  margin-bottom: 10px;
+}
+
+/* Choices */
+#choicesForm {
+  margin-bottom: 10px;
+}
+
+#choicesForm label {
+  display: block;
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 5px;
+  cursor: pointer;
+}
+
+#choicesForm input[type="radio"] {
+  margin-right: 8px;
+}
+
+#choicesForm label.selected {
+  background-color: #e6f7ff;
+  border-color: #91d5ff;
+}
+
+/* Colour coding for different types of terms */
+.symptom {
+  color: #0d47a1; /* blue for raw symptoms */
+}
+.intermediate {
+  color: #2e7d32; /* green for intermediate symptoms */
+}
+.medicine {
+  color: #8e24aa; /* purple for medicine names */
+  font-weight: bold;
+}
+
+/* Results */
+#scoreSummary {
+  font-size: 1.1rem;
+}
+
+/* Confusion matrix table */
+.confusion-matrix {
+  border-collapse: collapse;
+  margin-top: 10px;
+  width: 100%;
+}
+.confusion-matrix th,
+.confusion-matrix td {
+  border: 1px solid #ccc;
+  padding: 6px 8px;
+  text-align: center;
+}
+.confusion-matrix th {
+  background-color: #f0f0f0;
+}
+
+/* Timers container styling */
+#timers {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #ddd;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+/* Center each timer inside the timer box */
+#timers .timer {
+  margin: 0 10px;
+  text-align: center;
+}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>외계인 처방 시뮬레이션</h1>
+
+    <!-- 설정 패널 -->
+    <section id="configPanel">
+      <h2>설정</h2>
+      <div class="setting">
+        <input type="checkbox" id="timePressure" />
+        <label for="timePressure">시간 압박 사용(타이머)</label>
+      </div>
+      <div class="setting">
+        <label for="aiMode">AI 지원 모드:</label>
+        <select id="aiMode">
+          <option value="none">AI 없음</option>
+          <option value="before">AI 먼저</option>
+          <option value="after">AI 나중</option>
+          <option value="mixed">혼합(문제마다 무작위)</option>
+        </select>
+      </div>
+      <button id="startBtn">실험 시작</button>
+    </section>
+
+    <!-- 퀴즈 섹션 -->
+    <section id="quizSection" class="hidden">
+      <div id="timers" class="hidden">
+        <div id="globalTimer" class="timer"></div>
+        <div id="localTimer" class="timer"></div>
+      </div>
+
+      <div id="questionContainer">
+        <h2>외계인 정보</h2>
+        <div id="treatmentPlan" class="treatment-plan"></div>
+        <div id="observedSymptoms" class="observed"></div>
+
+        <div id="aiBox" class="ai-box hidden"></div>
+
+        <form id="choicesForm">
+          <!-- 선택지가 여기에 생성됩니다 -->
+        </form>
+        <button id="submitAnswer" class="hidden">답 제출</button>
+      </div>
+    </section>
+
+    <!-- 결과 섹션 -->
+    <section id="resultSection" class="hidden">
+      <h2>실험 완료</h2>
+      <div id="scoreSummary"></div>
+      <button id="restartBtn">다시 시작</button>
+    </section>
+  </div>
+
+  <!-- Inline script unified from script.js -->
+  <script>
+/*
+ * Alien Prescription Simulation
+ *
+ * This script implements an interactive simulation inspired by the
+ * alien prescription task described in the research paper “Accuracy‑Time
+ * Tradeoffs in AI‑Assisted Decision Making under Time Pressure”.
+ *
+ * Users can toggle whether time pressure is enabled and choose which
+ * type of AI assistance they receive: no AI, AI assistance before
+ * submitting an answer, AI assistance after submitting an initial
+ * answer, or a mixed condition where the assistance type is chosen
+ * randomly for each question. The simulation then presents a series
+ * of “aliens” with unique treatment plans and observed symptoms.
+ * Participants must select the best medicine based on the rules.
+ */
+
+// Dataset: define a set of alien tasks. Each task consists of a unique
+// treatment plan (decision set rules) and a list of observed symptoms.
+const tasks = [
+  {
+    id: 1,
+    // Each rule has an array of groups (AND) and a result. Within each
+    // group, the strings are OR conditions. The boolean `intermediate`
+    // indicates whether the result is an intermediate symptom (true) or
+    // a final medicine (false).
+    rules: [
+      { groups: [['shortness of breath', 'seizures', 'brain fog', 'neck pain']], result: 'broken bones', intermediate: true },
+      { groups: [['brain fog', 'slurred speech'], ['slurred speech', 'seizures', 'sleepy'], ['bloating']], result: 'fast heart rate', intermediate: true },
+      { groups: [['seizures', 'shortness of breath', 'brain fog', 'confusion']], result: 'low blood pressure', intermediate: true },
+      { groups: [['shortness of breath', 'sleepy', 'aching joints']], result: 'stimulants', intermediate: false },
+      { groups: [['migraine'], ['thirsty'], ['bloating'], ['low blood pressure']], result: 'tranquilizers', intermediate: false },
+      { groups: [['shortness of breath', 'aching joints', 'jaundice', 'confusion']], result: 'antibiotics', intermediate: false },
+      { groups: [['broken bones', 'seizures'], ['thirsty'], ['vomiting', 'aching joints']], result: 'vitamins', intermediate: false },
+      { groups: [['neck pain', 'rash', 'jaundice'], ['slurred speech', 'rash']], result: 'laxatives', intermediate: false }
+    ],
+    observed: ['thirsty', 'vomiting', 'bloating', 'migraine', 'brain fog']
+  },
+  {
+    id: 2,
+    rules: [
+      { groups: [['shortness of breath', 'seizures', 'brain fog', 'neck pain']], result: 'broken bones', intermediate: true },
+      { groups: [['brain fog', 'slurred speech'], ['slurred speech', 'seizures', 'sleepy'], ['bloating']], result: 'fast heart rate', intermediate: true },
+      { groups: [['seizures', 'shortness of breath', 'brain fog', 'confusion']], result: 'low blood pressure', intermediate: true },
+      { groups: [['shortness of breath', 'sleepy', 'aching joints']], result: 'stimulants', intermediate: false },
+      { groups: [['migraine'], ['thirsty'], ['bloating'], ['low blood pressure']], result: 'tranquilizers', intermediate: false },
+      { groups: [['shortness of breath', 'aching joints', 'jaundice', 'confusion']], result: 'antibiotics', intermediate: false },
+      { groups: [['broken bones', 'seizures'], ['thirsty'], ['vomiting', 'aching joints']], result: 'vitamins', intermediate: false },
+      { groups: [['neck pain', 'rash', 'jaundice'], ['slurred speech', 'rash']], result: 'laxatives', intermediate: false }
+    ],
+    observed: ['seizures', 'thirsty', 'vomiting', 'bloating', 'neck pain']
+  },
+  {
+    id: 3,
+    rules: [
+      { groups: [['shortness of breath', 'seizures', 'brain fog', 'neck pain']], result: 'broken bones', intermediate: true },
+      { groups: [['brain fog', 'slurred speech'], ['slurred speech', 'seizures', 'sleepy'], ['bloating']], result: 'fast heart rate', intermediate: true },
+      { groups: [['seizures', 'shortness of breath', 'brain fog', 'confusion']], result: 'low blood pressure', intermediate: true },
+      { groups: [['shortness of breath', 'sleepy', 'aching joints']], result: 'stimulants', intermediate: false },
+      { groups: [['migraine'], ['thirsty'], ['bloating'], ['low blood pressure']], result: 'tranquilizers', intermediate: false },
+      { groups: [['shortness of breath', 'aching joints', 'jaundice', 'confusion']], result: 'antibiotics', intermediate: false },
+      { groups: [['broken bones', 'seizures'], ['thirsty'], ['vomiting', 'aching joints']], result: 'vitamins', intermediate: false },
+      { groups: [['neck pain', 'rash', 'jaundice'], ['slurred speech', 'rash']], result: 'laxatives', intermediate: false }
+    ],
+    observed: ['shortness of breath', 'sleepy', 'jaundice', 'rash']
+  },
+  {
+    id: 4,
+    rules: [
+      { groups: [['shortness of breath', 'seizures', 'brain fog', 'neck pain']], result: 'broken bones', intermediate: true },
+      { groups: [['brain fog', 'slurred speech'], ['slurred speech', 'seizures', 'sleepy'], ['bloating']], result: 'fast heart rate', intermediate: true },
+      { groups: [['seizures', 'shortness of breath', 'brain fog', 'confusion']], result: 'low blood pressure', intermediate: true },
+      { groups: [['shortness of breath', 'sleepy', 'aching joints']], result: 'stimulants', intermediate: false },
+      { groups: [['migraine'], ['thirsty'], ['bloating'], ['low blood pressure']], result: 'tranquilizers', intermediate: false },
+      { groups: [['shortness of breath', 'aching joints', 'jaundice', 'confusion']], result: 'antibiotics', intermediate: false },
+      { groups: [['broken bones', 'seizures'], ['thirsty'], ['vomiting', 'aching joints']], result: 'vitamins', intermediate: false },
+      { groups: [['neck pain', 'rash', 'jaundice'], ['slurred speech', 'rash']], result: 'laxatives', intermediate: false }
+    ],
+    observed: ['seizures', 'slurred speech', 'sleepy', 'bloating']
+  }
+];
+
+// List of final medicines and intermediate symptoms, used for display and
+// highlighting purposes. We also define a translation map so that Korean
+// labels can be shown to the user while keeping the internal codes for
+// evaluation logic.
+const finalMedicines = ['stimulants', 'tranquilizers', 'antibiotics', 'vitamins', 'laxatives'];
+const intermediateSymptoms = ['broken bones', 'fast heart rate', 'low blood pressure'];
+
+// Mapping of medicine codes to Korean labels. If a code is not present
+// it will fall back to the code itself.
+const medicineLabels = {
+  stimulants: '흥분제',
+  tranquilizers: '진정제',
+  antibiotics: '항생제',
+  vitamins: '비타민',
+  laxatives: '완하제'
+};
+
+// Mapping of symptom and intermediate names to Korean labels. This covers
+// all raw symptoms and intermediate results defined in the treatment
+// plan so that the displayed information is fully localised.
+const symptomLabels = {
+  'shortness of breath': '호흡곤란',
+  seizures: '발작',
+  'brain fog': '뇌안개',
+  'neck pain': '목 통증',
+  'slurred speech': '말이 어눌함',
+  sleepy: '졸림',
+  bloating: '복부 팽만감',
+  confusion: '혼란',
+  'aching joints': '관절 통증',
+  migraine: '편두통',
+  thirsty: '갈증',
+  jaundice: '황달',
+  vomiting: '구토',
+  rash: '발진',
+  'broken bones': '골절',
+  'fast heart rate': '빠른 심박수',
+  'low blood pressure': '저혈압'
+};
+
+// Shuffle helper for randomising tasks order.
+function shuffle(array) {
+  const arr = array.slice();
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// DOM elements
+const configPanel = document.getElementById('configPanel');
+const timePressureCheckbox = document.getElementById('timePressure');
+const aiModeSelect = document.getElementById('aiMode');
+const startBtn = document.getElementById('startBtn');
+const quizSection = document.getElementById('quizSection');
+const timersDiv = document.getElementById('timers');
+const globalTimerEl = document.getElementById('globalTimer');
+const localTimerEl = document.getElementById('localTimer');
+const treatmentPlanEl = document.getElementById('treatmentPlan');
+const observedEl = document.getElementById('observedSymptoms');
+const aiBoxEl = document.getElementById('aiBox');
+const choicesForm = document.getElementById('choicesForm');
+const submitBtn = document.getElementById('submitAnswer');
+const resultSection = document.getElementById('resultSection');
+const scoreSummaryEl = document.getElementById('scoreSummary');
+const restartBtn = document.getElementById('restartBtn');
+const alienImgEl = document.getElementById('alienImage');
+
+// Simulation state
+let taskOrder = [];
+let currentTaskIndex = 0;
+let currentAssistMode = 'none';
+let globalTimeRemaining = 0;
+let globalTimerInterval = null;
+let localTimeRemaining = 0;
+let localTimerInterval = null;
+let awaitingUpdate = false;
+let initialAnswer = null;
+let answerRecords = [];
+
+// Attach event listeners
+startBtn.addEventListener('click', startSimulation);
+submitBtn.addEventListener('click', handleSubmit);
+restartBtn.addEventListener('click', restartSimulation);
+
+// Start the simulation: initialise state and display the first question.
+function startSimulation() {
+  // Reset state
+  answerRecords = [];
+  currentTaskIndex = 0;
+  awaitingUpdate = false;
+  initialAnswer = null;
+  // Determine assistance mode
+  currentAssistMode = aiModeSelect.value;
+  // Shuffle task order to avoid predictable sequence
+  taskOrder = shuffle(tasks);
+
+  // Decide which tasks will receive a false AI recommendation. We want exactly half of the tasks
+  // (2 out of 4 in this dataset) to be shown an incorrect medicine suggestion.
+  // Shuffle the indices of taskOrder and pick the first half as false recommendation tasks.
+  {
+    const indices = Array.from({ length: taskOrder.length }, (_, i) => i);
+    const shuffledIndices = shuffle(indices);
+    const falseCount = Math.floor(taskOrder.length / 2);
+    const falseIndices = shuffledIndices.slice(0, falseCount);
+    taskOrder.forEach((t, idx) => {
+      t.isFalseRecommendation = falseIndices.includes(idx);
+    });
+  }
+  // Hide config panel and results, show quiz
+  configPanel.classList.add('hidden');
+  resultSection.classList.add('hidden');
+  quizSection.classList.remove('hidden');
+  // Setup timers if time pressure enabled
+  if (timePressureCheckbox.checked) {
+    timersDiv.classList.remove('hidden');
+    // 5 minutes global timer (300 seconds)
+    globalTimeRemaining = 300;
+    updateGlobalTimerDisplay();
+    globalTimerInterval = setInterval(() => {
+      globalTimeRemaining--;
+      updateGlobalTimerDisplay();
+      if (globalTimeRemaining <= 0) {
+        clearInterval(globalTimerInterval);
+        // End simulation when global timer runs out
+        endSimulation();
+      }
+    }, 1000);
+    // Apply large font and blinking effect to timers under time pressure
+    globalTimerEl.classList.add('large-timer', 'blinking');
+    localTimerEl.classList.add('large-timer', 'blinking');
+  } else {
+    timersDiv.classList.add('hidden');
+    // Remove large/blinking styles if previously added
+    globalTimerEl.classList.remove('large-timer', 'blinking');
+    localTimerEl.classList.remove('large-timer', 'blinking');
+  }
+  // Render first question
+  renderQuestion();
+}
+
+// Render the current question
+function renderQuestion() {
+  // Clear previous timers
+  clearLocalTimer();
+  // Reset AI box and submit button
+  aiBoxEl.classList.add('hidden');
+  aiBoxEl.textContent = '';
+  submitBtn.textContent = '답 제출';
+  submitBtn.classList.remove('hidden');
+  awaitingUpdate = false;
+  initialAnswer = null;
+  // If no more tasks, end simulation
+  if (currentTaskIndex >= taskOrder.length) {
+    endSimulation();
+    return;
+  }
+  const task = taskOrder[currentTaskIndex];
+  // Evaluate task to compute derived symptoms and best medicine
+  const evaluation = evaluateTask(task);
+  task.evaluation = evaluation;
+  // Determine assistance type for this question
+  let assistType = currentAssistMode;
+  if (currentAssistMode === 'mixed') {
+    // Randomly pick one of none, before, after
+    const options = ['none', 'before', 'after'];
+    assistType = options[Math.floor(Math.random() * options.length)];
+  }
+  task.assistType = assistType;
+  // Format and display treatment plan
+  treatmentPlanEl.innerHTML = formatTreatmentPlan(task.rules);
+  // Display observed symptoms
+  observedEl.innerHTML = `관찰된 증상: ` + task.observed.map(s => {
+    const label = symptomLabels[s] || s;
+    return `<span class="symptom">${label}</span>`;
+  }).join(', ');
+  // Display alien image
+  if (alienImgEl) {
+    alienImgEl.classList.remove('hidden');
+  }
+  // Build choice radio buttons
+  buildChoices(finalMedicines);
+  // Show AI suggestion immediately if AI-before
+  if (assistType === 'before') {
+    showAIBox(evaluation, task);
+  }
+  // Start local timer if time pressure enabled
+  if (timePressureCheckbox.checked) {
+    // 60 seconds for initial attempt
+    localTimeRemaining = 60;
+    updateLocalTimerDisplay();
+    localTimerInterval = setInterval(() => {
+      localTimeRemaining--;
+      updateLocalTimerDisplay();
+      if (localTimeRemaining <= 0) {
+        // For AI-after, automatically proceed to reveal AI if time runs out and not yet revealed
+        if (assistType === 'after' && !awaitingUpdate) {
+          // Reveal AI and start update phase
+          handleSubmit();
+        } else if (awaitingUpdate) {
+          // Finalise answer when update timer expires
+          finalizeAnswer();
+        } else {
+          // No AI or AI-before: just record whatever is selected and proceed
+          handleSubmit();
+        }
+      }
+    }, 1000);
+  }
+}
+
+// Build radio buttons for medicine choices
+function buildChoices(options) {
+  choicesForm.innerHTML = '';
+  options.forEach(option => {
+    const id = `choice-${option}`;
+    const label = document.createElement('label');
+    label.setAttribute('for', id);
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'medicine';
+    input.id = id;
+    input.value = option;
+    label.appendChild(input);
+    // Display Korean label if available, otherwise fallback to the code
+    const displayName = medicineLabels[option] || option;
+    label.appendChild(document.createTextNode(displayName));
+    choicesForm.appendChild(label);
+    // When clicked, mark selected
+    input.addEventListener('change', () => {
+      // remove selected class from all
+      Array.from(choicesForm.querySelectorAll('label')).forEach(lbl => lbl.classList.remove('selected'));
+      label.classList.add('selected');
+    });
+  });
+}
+
+// Handle submit button click
+function handleSubmit() {
+  const task = taskOrder[currentTaskIndex];
+  const assistType = task.assistType;
+  const selectedInput = choicesForm.querySelector('input[name="medicine"]:checked');
+  const selectedValue = selectedInput ? selectedInput.value : null;
+  // If AI-after and we haven't shown the AI yet, reveal AI and allow update
+  if (assistType === 'after' && !awaitingUpdate) {
+    // Save the initial answer
+    initialAnswer = selectedValue;
+    // Show AI suggestion and explanation
+    showAIBox(task.evaluation, task);
+    awaitingUpdate = true;
+    // Reset local timer to 20 seconds for update phase
+    if (timePressureCheckbox.checked) {
+      clearLocalTimer();
+      localTimeRemaining = 20;
+      updateLocalTimerDisplay();
+      localTimerInterval = setInterval(() => {
+        localTimeRemaining--;
+        updateLocalTimerDisplay();
+        if (localTimeRemaining <= 0) {
+          finalizeAnswer();
+        }
+      }, 1000);
+    }
+    // Change button text to indicate update (Korean)
+    submitBtn.textContent = '최종 답 제출';
+    return;
+  }
+  // For no-AI or AI-before or update phase of AI-after
+  finalizeAnswer();
+}
+
+// Finalise answer: evaluate correctness, record, and move to next question
+function finalizeAnswer() {
+  const task = taskOrder[currentTaskIndex];
+  const assistType = task.assistType;
+  const selectedInput = choicesForm.querySelector('input[name="medicine"]:checked');
+  let finalAnswer = selectedInput ? selectedInput.value : null;
+  // If AI-after update phase but user did not change selection, keep initial answer
+  if (assistType === 'after' && awaitingUpdate && !finalAnswer) {
+    finalAnswer = initialAnswer;
+  }
+  // Clear timers for this question
+  clearLocalTimer();
+  // Compute correctness
+  let correctness = 'wrong';
+  const evalScores = task.evaluation.finalScores;
+  if (finalAnswer) {
+    const bestScore = Math.max(...Object.values(evalScores));
+    const bestMeds = Object.keys(evalScores).filter(m => evalScores[m] === bestScore);
+    if (bestMeds.includes(finalAnswer)) {
+      correctness = 'best';
+    } else if (evalScores[finalAnswer] > 0) {
+      correctness = 'suboptimal';
+    }
+  }
+  // Record result
+  answerRecords.push({
+    taskId: task.id,
+    assistType,
+    selected: finalAnswer,
+    correctness
+  });
+  // Move to next task
+  currentTaskIndex++;
+  renderQuestion();
+}
+
+// End simulation and display results
+function endSimulation() {
+  // Clear timers
+  clearLocalTimer();
+  if (globalTimerInterval) {
+    clearInterval(globalTimerInterval);
+    globalTimerInterval = null;
+  }
+  quizSection.classList.add('hidden');
+  resultSection.classList.remove('hidden');
+  // Compute statistics
+  let bestCount = answerRecords.filter(r => r.correctness === 'best').length;
+  let suboptimalCount = answerRecords.filter(r => r.correctness === 'suboptimal').length;
+  let wrongCount = answerRecords.filter(r => r.correctness === 'wrong').length;
+  const total = answerRecords.length;
+  scoreSummaryEl.innerHTML = `총 ${total}개 문제를 완료했습니다.<br>` +
+    `최적 정답: ${bestCount}개<br>` +
+    `차선 정답: ${suboptimalCount}개<br>` +
+    `오답: ${wrongCount}개`;
+
+  // Compute a confusion matrix including all tasks, whether AI assistance was provided or not
+  // Categories: AI 권고가 정답/오답과 사용자가 정답/오답인 경우
+  let aiCorrect_userCorrect = 0;
+  let aiCorrect_userWrong = 0;
+  let aiWrong_userCorrect = 0;
+  let aiWrong_userWrong = 0;
+  answerRecords.forEach(record => {
+    const task = taskOrder.find(t => t.id === record.taskId);
+    if (!task) return;
+    // Evaluate which medicines are truly best for this task
+    const evalScores = task.evaluation.finalScores;
+    const maxScore = Math.max(...Object.values(evalScores));
+    const bestMeds = Object.keys(evalScores).filter(m => evalScores[m] === maxScore);
+    // Determine AI's single recommendation: use stored recommendation if available; otherwise derive from evaluation
+    let aiRec = task.aiRecommendation;
+    if (!aiRec) {
+      // Choose a random best medicine as the AI recommendation when none was provided
+      aiRec = bestMeds[Math.floor(Math.random() * bestMeds.length)];
+    }
+    const aiCorrect = bestMeds.includes(aiRec);
+    // Determine if user answer was correct
+    const userCorrect = record.correctness === 'best';
+    if (aiCorrect && userCorrect) aiCorrect_userCorrect++;
+    else if (aiCorrect && !userCorrect) aiCorrect_userWrong++;
+    else if (!aiCorrect && userCorrect) aiWrong_userCorrect++;
+    else aiWrong_userWrong++;
+  });
+  // Build the confusion matrix table
+  let matrixHTML = '<h3>AI 권고와 사용자 결과 혼동 행렬</h3>';
+  matrixHTML += '<table class="confusion-matrix"><thead><tr><th rowspan="2">AI 권고</th><th colspan="2">사용자</th></tr>';
+  matrixHTML += '<tr><th>정답</th><th>오답</th></tr></thead><tbody>';
+  matrixHTML += `<tr><th>정답</th><td>${aiCorrect_userCorrect}</td><td>${aiCorrect_userWrong}</td></tr>`;
+  matrixHTML += `<tr><th>오답</th><td>${aiWrong_userCorrect}</td><td>${aiWrong_userWrong}</td></tr>`;
+  matrixHTML += '</tbody></table>';
+  scoreSummaryEl.innerHTML += '<br><br>' + matrixHTML;
+}
+
+// Restart simulation: return to settings
+function restartSimulation() {
+  // Clear timers
+  clearLocalTimer();
+  if (globalTimerInterval) {
+    clearInterval(globalTimerInterval);
+    globalTimerInterval = null;
+  }
+  // Show config panel
+  configPanel.classList.remove('hidden');
+  quizSection.classList.add('hidden');
+  resultSection.classList.add('hidden');
+}
+
+// Show AI suggestion box with recommendation and brief explanation
+function showAIBox(evaluation, task) {
+  // Compute the best medicines based on evaluation scores
+  const scores = evaluation.finalScores;
+  const bestScore = Math.max(...Object.values(scores));
+  const bestMeds = Object.keys(scores).filter(m => scores[m] === bestScore);
+
+  let aiRecommendation;
+  let reasonSymptom = null;
+  if (task.isFalseRecommendation) {
+    // Choose a wrong medicine (not among the best medicines)
+    const wrongCandidates = finalMedicines.filter(med => !bestMeds.includes(med));
+    aiRecommendation = wrongCandidates[Math.floor(Math.random() * wrongCandidates.length)];
+    // Attempt to find a plausible reason from the rule of this wrong medicine
+    const wrongRule = task.rules.find(r => !r.intermediate && r.result === aiRecommendation);
+    if (wrongRule) {
+      // Prefer an intermediate symptom that was derived
+      for (const group of wrongRule.groups) {
+        for (const sym of group) {
+          if (intermediateSymptoms.includes(sym) && evaluation.derived.has(sym)) {
+            reasonSymptom = sym;
+            break;
+          }
+        }
+        if (reasonSymptom) break;
+      }
+      // If no derived intermediate, pick a symptom from the rule that is observed or derived
+      if (!reasonSymptom) {
+        for (const group of wrongRule.groups) {
+          for (const sym of group) {
+            if (task.observed.includes(sym) || evaluation.derived.has(sym)) {
+              reasonSymptom = sym;
+              break;
+            }
+          }
+          if (reasonSymptom) break;
+        }
+      }
+      // Fallback: pick the first symptom of the first group
+      if (!reasonSymptom && wrongRule.groups.length > 0 && wrongRule.groups[0].length > 0) {
+        reasonSymptom = wrongRule.groups[0][0];
+      }
+    }
+  } else {
+    // Choose one of the best medicines at random as the correct recommendation
+    aiRecommendation = bestMeds[Math.floor(Math.random() * bestMeds.length)];
+    // Find the rule for this medicine to extract a reason
+    const rule = task.rules.find(r => !r.intermediate && r.result === aiRecommendation);
+    if (rule) {
+      // Prefer an intermediate symptom that was derived
+      for (const group of rule.groups) {
+        for (const sym of group) {
+          if (intermediateSymptoms.includes(sym) && evaluation.derived.has(sym)) {
+            reasonSymptom = sym;
+            break;
+          }
+        }
+        if (reasonSymptom) break;
+      }
+      // If no derived intermediate, pick a symptom from the rule that is observed or derived
+      if (!reasonSymptom) {
+        for (const group of rule.groups) {
+          for (const sym of group) {
+            if (task.observed.includes(sym) || evaluation.derived.has(sym)) {
+              reasonSymptom = sym;
+              break;
+            }
+          }
+          if (reasonSymptom) break;
+        }
+      }
+      // Fallback: pick the first symptom of the first group
+      if (!reasonSymptom && rule.groups.length > 0 && rule.groups[0].length > 0) {
+        reasonSymptom = rule.groups[0][0];
+      }
+    }
+  }
+  // Save the chosen recommendation on the task for confusion matrix calculations
+  task.aiRecommendation = aiRecommendation;
+  // Build message using Korean labels and include the reason
+  const recommendationLabel = medicineLabels[aiRecommendation] || aiRecommendation;
+  let message = `AI가 <strong>${recommendationLabel}</strong> 처방을 권장합니다.`;
+  if (reasonSymptom) {
+    const reasonLabel = symptomLabels[reasonSymptom] || reasonSymptom;
+    message += ` 이유: 외계인에게 <span class="${intermediateSymptoms.includes(reasonSymptom) ? 'intermediate' : 'symptom'}">${reasonLabel}</span> 증상이 포함되어 있기 때문입니다.`;
+  }
+  aiBoxEl.innerHTML = message;
+  aiBoxEl.classList.remove('hidden');
+}
+
+// Evaluate a task: forward chain intermediate symptoms and compute scores for final medicines
+function evaluateTask(task) {
+  const observed = task.observed;
+  const derived = new Set();
+  // Forward chaining to derive intermediate symptoms
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const rule of task.rules) {
+      if (rule.intermediate && !derived.has(rule.result)) {
+        const satisfied = rule.groups.every(group => group.some(sym => observed.includes(sym) || derived.has(sym)));
+        if (satisfied) {
+          derived.add(rule.result);
+          changed = true;
+        }
+      }
+    }
+  }
+  // Compute scores for final medicines
+  const finalScores = {};
+  const usedCombos = {};
+  for (const rule of task.rules) {
+    if (!rule.intermediate) {
+      // Check if all groups satisfied
+      const satisfiedGroups = [];
+      let allSatisfied = true;
+      for (const group of rule.groups) {
+        const availableSyms = group.filter(sym => observed.includes(sym) || derived.has(sym));
+        if (availableSyms.length === 0) {
+          allSatisfied = false;
+          break;
+        }
+        satisfiedGroups.push(availableSyms);
+      }
+      if (!allSatisfied) continue;
+      // Generate all combinations and count unique observed symptoms used
+      let bestCount = 0;
+      let bestSet = new Set();
+      function explore(idx, currentSet) {
+        if (idx >= satisfiedGroups.length) {
+          // Count unique observed symptoms
+          const count = Array.from(currentSet).filter(sym => observed.includes(sym)).length;
+          if (count > bestCount) {
+            bestCount = count;
+            bestSet = new Set(currentSet);
+          }
+          return;
+        }
+        for (const sym of satisfiedGroups[idx]) {
+          currentSet.add(sym);
+          explore(idx + 1, currentSet);
+          currentSet.delete(sym);
+        }
+      }
+      explore(0, new Set());
+      finalScores[rule.result] = bestCount;
+      usedCombos[rule.result] = bestSet;
+    }
+  }
+  return { derived, finalScores, usedCombos };
+}
+
+// Format the treatment plan into HTML with highlighting
+function formatTreatmentPlan(rules) {
+  return rules.map(rule => {
+    const groupStr = rule.groups.map(group => {
+      const content = group.map(sym => wrapSym(sym)).join(' or ');
+      return `(${content})`;
+    }).join(' and ');
+    const resultStr = wrapSym(rule.result);
+    return `<div class="rule">${groupStr} → ${resultStr}</div>`;
+  }).join('');
+}
+
+// Wrap a symptom or medicine in a span with appropriate class for colour
+function wrapSym(sym) {
+  if (finalMedicines.includes(sym)) {
+    // Use Korean label for medicines if available
+    const label = medicineLabels[sym] || sym;
+    return `<span class="medicine">${label}</span>`;
+  } else if (intermediateSymptoms.includes(sym)) {
+    // Intermediate results use Korean label if available
+    const label = symptomLabels[sym] || sym;
+    return `<span class="intermediate">${label}</span>`;
+  } else {
+    // Raw symptoms use Korean label if available
+    const label = symptomLabels[sym] || sym;
+    return `<span class="symptom">${label}</span>`;
+  }
+}
+
+// Update global timer display and handle colour changes
+function updateGlobalTimerDisplay() {
+  const minutes = Math.floor(globalTimeRemaining / 60);
+  const seconds = globalTimeRemaining % 60;
+  globalTimerEl.textContent = `전체 타이머: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+  // Colour change not necessary for global timer
+}
+
+// Update local timer display and handle colour changes
+function updateLocalTimerDisplay() {
+  const seconds = localTimeRemaining;
+  localTimerEl.textContent = `남은 시간: ${seconds}s`;
+  localTimerEl.classList.remove('warning', 'danger');
+  if (seconds <= 0) {
+    localTimerEl.classList.add('danger');
+  } else if (seconds <= 10) {
+    localTimerEl.classList.add('warning');
+  }
+}
+
+// Clear the local timer interval
+function clearLocalTimer() {
+  if (localTimerInterval) {
+    clearInterval(localTimerInterval);
+    localTimerInterval = null;
+  }
+}
+  </script>
+</body>
+</html>
